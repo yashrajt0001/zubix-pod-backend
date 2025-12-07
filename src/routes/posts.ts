@@ -2,8 +2,7 @@ import express, { Response } from 'express';
 import { authMiddleware, isPodOwner, AuthenticatedRequest } from '../middleware/auth.js';
 import { body, validationResult } from 'express-validator';
 import prisma from '../utils/prisma';
-import { ApiResponse } from '../utils/responses';
-import { checkPodMembership, checkPodOwnership, userSelectMinimal } from '../utils/permissions';
+import { checkPodMembership, checkPodOwnership } from '../utils/permissions';
 
 const router = express.Router();
 
@@ -41,14 +40,17 @@ router.get('/pod/:podId', authMiddleware, async (req: AuthenticatedRequest, res:
             id: true,
             username: true,
             fullName: true,
-            avatar: true
+            email: true,
+            mobile: true,
+            profilePhoto: true,
+            role: true,
+            createdAt: true
           }
         },
         pod: {
           select: {
             id: true,
-            name: true,
-            avatar: true
+            name: true
           }
         },
         reactions: {
@@ -127,14 +129,17 @@ router.get('/feed', authMiddleware, async (req: AuthenticatedRequest, res: Respo
             id: true,
             username: true,
             fullName: true,
-            avatar: true
+            email: true,
+            mobile: true,
+            profilePhoto: true,
+            role: true,
+            createdAt: true
           }
         },
         pod: {
           select: {
             id: true,
             name: true,
-            avatar: true
           }
         },
         reactions: {
@@ -172,6 +177,99 @@ router.get('/feed', authMiddleware, async (req: AuthenticatedRequest, res: Respo
   } catch (error) {
     console.error('Get feed error:', error);
     res.status(500).json({ error: 'Failed to fetch feed' });
+  }
+});
+
+// Get a single post by ID
+router.get('/:postId', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { postId } = req.params;
+
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            fullName: true,
+            email: true,
+            mobile: true,
+            profilePhoto: true,
+            role: true,
+            createdAt: true
+          }
+        },
+        pod: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
+        reactions: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                profilePhoto: true
+              }
+            }
+          }
+        },
+        comments: {
+          include: {
+            author: {
+              select: {
+                id: true,
+                username: true,
+                fullName: true,
+                email: true,
+                mobile: true,
+                profilePhoto: true,
+                role: true,
+                createdAt: true
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'asc'
+          }
+        },
+        _count: {
+          select: {
+            reactions: true,
+            comments: true
+          }
+        }
+      }
+    });
+
+    if (!post) {
+      res.status(404).json({ error: 'Post not found' });
+      return;
+    }
+
+    // Check if user is a member of the pod
+    const isMember = await checkPodMembership(post.podId, req.user!.id);
+    const isOwner = await checkPodOwnership(post.podId, req.user!.id);
+
+    if (!isMember && !isOwner) {
+      res.status(403).json({ error: 'You must be a member of this pod to view this post' });
+      return;
+    }
+
+    // Transform post to include likes array and isOwnerPost flag
+    const transformedPost = {
+      ...post,
+      likes: post.reactions.filter(r => r.type === 'like').map(r => r.userId),
+      isOwnerPost: post.authorId === post.pod.id || await checkPodOwnership(post.podId, post.authorId)
+    };
+
+    res.json({ post: transformedPost });
+  } catch (error) {
+    console.error('Get post error:', error);
+    res.status(500).json({ error: 'Failed to fetch post' });
   }
 });
 
@@ -220,14 +318,13 @@ router.post('/',
               id: true,
               username: true,
               fullName: true,
-              avatar: true
+              profilePhoto: true
             }
           },
           pod: {
             select: {
               id: true,
               name: true,
-              avatar: true
             }
           },
           _count: {
@@ -291,14 +388,13 @@ router.put('/:postId',
               id: true,
               username: true,
               fullName: true,
-              avatar: true
+              profilePhoto: true
             }
           },
           pod: {
             select: {
               id: true,
               name: true,
-              avatar: true
             }
           },
           _count: {
@@ -358,85 +454,6 @@ router.delete('/:postId', authMiddleware, async (req: AuthenticatedRequest, res:
   }
 });
 
-// Get a single post by ID
-router.get('/:postId', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const { postId } = req.params;
-
-    const post = await prisma.post.findUnique({
-      where: { id: postId },
-      include: {
-        author: {
-          select: {
-            id: true,
-            username: true,
-            fullName: true,
-            avatar: true
-          }
-        },
-        pod: {
-          select: {
-            id: true,
-            name: true,
-            avatar: true
-          }
-        },
-        reactions: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                avatar: true
-              }
-            }
-          }
-        },
-        comments: {
-          include: {
-            author: {
-              select: {
-                id: true,
-                username: true,
-                fullName: true,
-                avatar: true
-              }
-            }
-          },
-          orderBy: {
-            createdAt: 'asc'
-          }
-        },
-        _count: {
-          select: {
-            reactions: true,
-            comments: true
-          }
-        }
-      }
-    });
-
-    if (!post) {
-      res.status(404).json({ error: 'Post not found' });
-      return;
-    }
-
-    // Check if user is a member of the pod
-    const isMember = await checkPodMembership(post.podId, req.user!.id);
-    const isOwner = await checkPodOwnership(post.podId, req.user!.id);
-
-    if (!isMember && !isOwner) {
-      res.status(403).json({ error: 'You must be a member of this pod to view this post' });
-      return;
-    }
-
-    res.json({ post });
-  } catch (error) {
-    console.error('Get post error:', error);
-    res.status(500).json({ error: 'Failed to fetch post' });
-  }
-});
-
 // Get comments for a post
 router.get('/:postId/comments', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -469,7 +486,11 @@ router.get('/:postId/comments', authMiddleware, async (req: AuthenticatedRequest
             id: true,
             username: true,
             fullName: true,
-            avatar: true
+            email: true,
+            mobile: true,
+            profilePhoto: true,
+            role: true,
+            createdAt: true
           }
         }
       },
@@ -533,7 +554,11 @@ router.post('/:postId/comments',
               id: true,
               username: true,
               fullName: true,
-              avatar: true
+              email: true,
+              mobile: true,
+              profilePhoto: true,
+              role: true,
+              createdAt: true
             }
           }
         }
@@ -611,3 +636,4 @@ router.post('/upload-media', authMiddleware, async (req: AuthenticatedRequest, r
 });
 
 export default router;
+

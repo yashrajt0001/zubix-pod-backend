@@ -10,7 +10,7 @@ export interface AuthenticatedUser {
   username: string;
   role: string;
   fullName: string | null;
-  avatar: string | null;
+  profilePhoto: string | null;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -46,7 +46,7 @@ export const authMiddleware = async (
         username: true, 
         role: true, 
         fullName: true, 
-        avatar: true 
+        profilePhoto: true 
       }
     });
 

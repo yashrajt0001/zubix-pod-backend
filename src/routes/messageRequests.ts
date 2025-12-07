@@ -22,9 +22,11 @@ router.get('/received', authMiddleware, async (req: AuthenticatedRequest, res: R
             id: true,
             username: true,
             fullName: true,
-            avatar: true,
-            organisationName: true,
-            designation: true
+            profilePhoto: true,
+            email: true,
+            mobile: true,
+            role: true,
+            createdAt: true
           }
         }
       },
@@ -55,9 +57,11 @@ router.get('/sent', authMiddleware, async (req: AuthenticatedRequest, res: Respo
             id: true,
             username: true,
             fullName: true,
-            avatar: true,
-            organisationName: true,
-            designation: true
+            profilePhoto: true,
+            email: true,
+            mobile: true,
+            role: true,
+            createdAt: true
           }
         }
       },
@@ -179,7 +183,11 @@ router.post('/',
               id: true,
               username: true,
               fullName: true,
-              avatar: true
+              profilePhoto: true,
+              email: true,
+              mobile: true,
+              role: true,
+              createdAt: true
             }
           },
           receiver: {
@@ -187,7 +195,11 @@ router.post('/',
               id: true,
               username: true,
               fullName: true,
-              avatar: true
+              profilePhoto: true,
+              email: true,
+              mobile: true,
+              role: true,
+              createdAt: true
             }
           }
         }

@@ -2,8 +2,6 @@ import express, { Response } from 'express';
 import { authMiddleware, isPodOwner, AuthenticatedRequest } from '../middleware/auth.js';
 import { body, validationResult } from 'express-validator';
 import prisma from '../utils/prisma';
-import { ApiResponse } from '../utils/responses';
-import { checkPodMembership, checkPodOwnership, userSelectMinimal } from '../utils/permissions';
 
 const router = express.Router();
 
@@ -66,7 +64,7 @@ router.get('/pod/:podId', authMiddleware, async (req: AuthenticatedRequest, res:
         }
       },
       orderBy: {
-        startDate: 'asc'
+        date: 'asc'
       }
     });
 
@@ -131,7 +129,7 @@ router.get('/feed', authMiddleware, async (req: AuthenticatedRequest, res: Respo
         }
       },
       orderBy: {
-        startDate: 'asc'
+        date: 'asc'
       }
     });
 
@@ -222,10 +220,13 @@ router.post('/',
   isPodOwner,
   [
     body('title').isLength({ min: 3 }).withMessage('Event title must be at least 3 characters'),
+    body('name').optional().isString(),
     body('description').optional().isString(),
+    body('type').isIn(['online', 'offline']).withMessage('Type must be online or offline'),
+    body('date').isISO8601().withMessage('Date must be a valid date'),
+    body('time').notEmpty().withMessage('Time is required'),
     body('location').optional().isString(),
-    body('startDate').isISO8601().withMessage('Start date must be a valid date'),
-    body('endDate').optional().isISO8601().withMessage('End date must be a valid date'),
+    body('helpline').optional().isString(),
     body('imageUrl').optional().isString(),
     body('podId').notEmpty().withMessage('Pod ID is required')
   ],
@@ -236,7 +237,7 @@ router.post('/',
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { title, description, location, startDate, endDate, imageUrl, podId } = req.body;
+      const { name, title, description, type, date, time, location, helpline, imageUrl, podId } = req.body;
 
       // Check if user owns the pod
       const pod = await prisma.pod.findUnique({
@@ -251,24 +252,19 @@ router.post('/',
         return res.status(403).json({ error: 'You are not the owner of this pod' });
       }
 
-      // Validate dates
-      const start = new Date(startDate);
-      if (endDate) {
-        const end = new Date(endDate);
-        if (end <= start) {
-          return res.status(400).json({ error: 'End date must be after start date' });
-        }
-      }
-
       const event = await prisma.event.create({
         data: {
+          name: name || title,
           title,
           description,
+          type,
+          date: new Date(date),
+          time,
           location,
-          startDate: start,
-          endDate: endDate ? new Date(endDate) : null,
+          helpline,
           imageUrl,
-          podId
+          podId,
+          createdBy: req.user!.id
         },
         include: {
           pod: {
@@ -300,10 +296,13 @@ router.put('/:eventId',
   isPodOwner,
   [
     body('title').optional().isLength({ min: 3 }),
+    body('name').optional().isString(),
     body('description').optional().isString(),
+    body('type').optional().isIn(['online', 'offline']),
+    body('date').optional().isISO8601(),
+    body('time').optional().isString(),
     body('location').optional().isString(),
-    body('startDate').optional().isISO8601(),
-    body('endDate').optional().isISO8601(),
+    body('helpline').optional().isString(),
     body('imageUrl').optional().isString()
   ],
   async (req: AuthenticatedRequest, res: Response) => {
@@ -314,7 +313,7 @@ router.put('/:eventId',
       }
 
       const { eventId } = req.params;
-      const { title, description, location, startDate, endDate, imageUrl } = req.body;
+      const { name, title, description, type, date, time, location, helpline, imageUrl } = req.body;
 
       // Check if event exists and user owns the pod
       const event = await prisma.event.findUnique({
@@ -336,21 +335,15 @@ router.put('/:eventId',
         return res.status(403).json({ error: 'You are not the owner of this pod' });
       }
 
-      // Validate dates if provided
-      if (startDate && endDate) {
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        if (end <= start) {
-          return res.status(400).json({ error: 'End date must be after start date' });
-        }
-      }
-
       const updateData: any = {};
-      if (title) updateData.title = title;
+      if (name !== undefined) updateData.name = name;
+      if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;
+      if (type !== undefined) updateData.type = type;
+      if (date !== undefined) updateData.date = new Date(date);
+      if (time !== undefined) updateData.time = time;
       if (location !== undefined) updateData.location = location;
-      if (startDate) updateData.startDate = new Date(startDate);
-      if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+      if (helpline !== undefined) updateData.helpline = helpline;
       if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
 
       const updatedEvent = await prisma.event.update({

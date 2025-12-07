@@ -21,7 +21,7 @@ router.get('/:userId', authMiddleware, async (req: AuthenticatedRequest, res: Re
         role: true,
         fullName: true,
         bio: true,
-        avatar: true,
+        profilePhoto: true,
         profilePhoto: true,
         organisationName: true,
         brandName: true,
@@ -70,7 +70,7 @@ router.get('/username/:username', authMiddleware, async (req: AuthenticatedReque
         role: true,
         fullName: true,
         bio: true,
-        avatar: true,
+        profilePhoto: true,
         profilePhoto: true,
         organisationName: true,
         brandName: true,
@@ -142,7 +142,7 @@ router.get('/search/query', authMiddleware, async (req: AuthenticatedRequest, re
         email: true,
         username: true,
         fullName: true,
-        avatar: true,
+        profilePhoto: true,
         profilePhoto: true,
         role: true,
         organisationName: true,
@@ -209,7 +209,7 @@ router.put('/:userId', authMiddleware, async (req: AuthenticatedRequest, res: Re
         role: true,
         fullName: true,
         bio: true,
-        avatar: true,
+        profilePhoto: true,
         profilePhoto: true,
         organisationName: true,
         brandName: true,
@@ -263,7 +263,7 @@ router.put('/profile', authMiddleware, async (req: AuthenticatedRequest, res: Re
         role: true,
         fullName: true,
         bio: true,
-        avatar: true,
+        profilePhoto: true,
         profilePhoto: true,
         organisationName: true,
         brandName: true,
@@ -315,7 +315,7 @@ router.post('/complete-registration', authMiddleware, async (req: AuthenticatedR
         role: true,
         fullName: true,
         bio: true,
-        avatar: true,
+        profilePhoto: true,
         profilePhoto: true,
         organisationName: true,
         brandName: true,
@@ -363,7 +363,7 @@ router.post('/upload-photo', authMiddleware, async (req: AuthenticatedRequest, r
       select: {
         id: true,
         profilePhoto: true,
-        avatar: true
+        profilePhoto: true
       }
     });
 
@@ -388,7 +388,7 @@ router.get('/:userId/pods', authMiddleware, async (req: AuthenticatedRequest, re
             id: true,
             username: true,
             fullName: true,
-            avatar: true
+            profilePhoto: true
           }
         },
         _count: {
@@ -411,7 +411,7 @@ router.get('/:userId/pods', authMiddleware, async (req: AuthenticatedRequest, re
                 id: true,
                 username: true,
                 fullName: true,
-                avatar: true
+                profilePhoto: true
               }
             },
             _count: {
@@ -439,3 +439,4 @@ router.get('/:userId/pods', authMiddleware, async (req: AuthenticatedRequest, re
 });
 
 export default router;
+

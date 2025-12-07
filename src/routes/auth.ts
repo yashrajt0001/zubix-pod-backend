@@ -63,7 +63,7 @@ const signupController = async (req: AuthenticatedRequest, res: Response): Promi
         username: true,
         role: true,
         fullName: true,
-        avatar: true,
+        profilePhoto: true,
         createdAt: true
       }
     });
@@ -156,7 +156,7 @@ router.put('/role/pod-owner', authMiddleware, async (req: AuthenticatedRequest, 
         role: true,
         fullName: true,
         bio: true,
-        avatar: true,
+        profilePhoto: true,
         createdAt: true,
         updatedAt: true
       }
@@ -203,7 +203,7 @@ router.put('/profile', authMiddleware,
           role: true,
           fullName: true,
           bio: true,
-          avatar: true,
+          profilePhoto: true,
           createdAt: true,
           updatedAt: true
         }
