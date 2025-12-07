@@ -25,24 +25,30 @@ const server: http.Server = http.createServer(app);
 // Setup Socket.IO
 const io = setupSocketIO(server);
 
-app.use(
-  cors({
-    origin: [
-      "http://localhost:8080",    // your local frontend
-      "http://localhost:5173",    // if using Vite
-      "http://localhost:3000",    // react
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      "http://localhost:8080",
+      "http://localhost:5173",
+      "http://localhost:3000",
       "https://zoobalo.com",
       "https://www.zoobalo.com",
-      "https://podapi.zoobalo.com"
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+      "https://podapi.zoobalo.com",
+    ];
 
-// Handle preflight requests
-app.options('*', cors());
+    // Allow no-origin (Postman, curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS: " + origin));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
