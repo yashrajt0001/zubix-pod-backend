@@ -90,7 +90,16 @@ router.get('/feed', authMiddleware, async (req: AuthenticatedRequest, res: Respo
       select: { podId: true }
     });
 
-    const podIds = memberships.map(m => m.podId);
+    // Get all pods user owns
+    const ownedPods = await prisma.pod.findMany({
+      where: { ownerId: req.user!.id },
+      select: { id: true }
+    });
+
+    // Combine both member and owned pod IDs
+    const memberPodIds = memberships.map(m => m.podId);
+    const ownedPodIds = ownedPods.map(p => p.id);
+    const podIds = [...new Set([...memberPodIds, ...ownedPodIds])]; // Remove duplicates
 
     if (podIds.length === 0) {
       return res.json({ events: [] });
@@ -228,10 +237,10 @@ router.post('/',
   authMiddleware,
   isPodOwner,
   [
-    body('title').isLength({ min: 3 }).withMessage('Event title must be at least 3 characters'),
-    body('name').optional().isString(),
+    body('name').isLength({ min: 3 }).withMessage('Event name must be at least 3 characters'),
+    body('title').optional().isString(),
     body('description').optional().isString(),
-    body('type').isIn(['online', 'offline']).withMessage('Type must be online or offline'),
+    body('type').isIn(['ONLINE', 'OFFLINE']).withMessage('Type must be ONLINE or OFFLINE'),
     body('date').isISO8601().withMessage('Date must be a valid date'),
     body('time').notEmpty().withMessage('Time is required'),
     body('location').optional().isString(),
@@ -438,6 +447,11 @@ router.post('/:eventId/join', authMiddleware, async (req: AuthenticatedRequest, 
 
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Prevent event creator from joining their own event
+    if (event.createdBy === req.user!.id) {
+      return res.status(403).json({ error: 'Event creators cannot join their own events' });
     }
 
     // Check if user is a member or owner of the pod

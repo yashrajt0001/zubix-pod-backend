@@ -238,7 +238,11 @@ const setupSocketIO = (server: HttpServer): Server => {
                 id: true,
                 username: true,
                 fullName: true,
-                avatar: true
+                email: true,
+                mobile: true,
+                role: true,
+                profilePhoto: true,
+                createdAt: true
               }
             }
           }

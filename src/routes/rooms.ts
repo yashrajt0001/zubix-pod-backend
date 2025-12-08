@@ -2,8 +2,6 @@ import express, { Response } from 'express';
 import { authMiddleware, isPodOwner, AuthenticatedRequest } from '../middleware/auth.js';
 import { body, validationResult } from 'express-validator';
 import prisma from '../utils/prisma.js';
-import { ApiResponse } from '../utils/responses.js';
-import { checkPodMembership, checkPodOwnership, userSelectMinimal } from '../utils/permissions.js';
 
 const router = express.Router();
 
@@ -121,7 +119,9 @@ router.post('/',
   [
     body('name').isLength({ min: 3 }).withMessage('Room name must be at least 3 characters'),
     body('description').optional().isString(),
-    body('podId').notEmpty().withMessage('Pod ID is required')
+    body('podId').notEmpty().withMessage('Pod ID is required'),
+    body('type').optional().isIn(['GENERAL', 'QA']).withMessage('Type must be GENERAL or QA'),
+    body('privacy').optional().isIn(['PUBLIC', 'PRIVATE']).withMessage('Privacy must be PUBLIC or PRIVATE')
   ],
   async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -130,7 +130,7 @@ router.post('/',
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { name, description, podId } = req.body;
+      const { name, description, podId, type, privacy } = req.body;
 
       // Check if user owns the pod
       const pod = await prisma.pod.findUnique({
@@ -150,6 +150,8 @@ router.post('/',
           name,
           description,
           podId,
+          type: type || 'GENERAL',
+          privacy: privacy || 'PUBLIC',
           createdBy: req.user!.id
         },
         include: {
